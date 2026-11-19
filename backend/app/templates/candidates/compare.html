@@ -1,0 +1,176 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Candidate Comparison Matrix{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Side-by-Side Candidate Comparison</h1>
+        <p class="text-muted small mb-0">Evaluate candidates across skills, reported experience spans, education, and match scores.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('candidates.list_candidates') }}" class="btn btn-outline-secondary rounded-pill btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> Candidate List
+        </a>
+    </div>
+</div>
+
+<!-- Candidate Selector Controls -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('candidates.compare') }}" class="row g-2 align-items-center">
+            <div class="col-md-9">
+                <label class="small text-muted fw-medium d-block mb-1">Select Candidates to Compare (Hold Ctrl/Cmd to select multiple):</label>
+                <select name="ids" class="form-select" multiple size="3">
+                    {% for c in all_candidates %}
+                        <option value="{{ c.id }}" {{ 'selected' if c.id in selected_ids }}>
+                            {{ c.full_name }} — {{ c.current_title or 'Candidate' }} ({{ c.years_experience }} yrs, {{ c.status | capitalize }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary-accent text-white rounded-pill w-100 py-2 shadow-sm">
+                    <i class="fa-solid fa-code-compare me-1"></i> Update Comparison
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Comparison Matrix Table -->
+{% if candidates %}
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="min-width: 180px;" class="text-uppercase small text-muted">Feature</th>
+                    {% for c in candidates %}
+                    <th style="min-width: 240px;" class="text-center bg-white">
+                        <div class="avatar-md mx-auto mb-2 bg-primary-subtle text-primary fw-bold">
+                            {{ c.first_name[0] | upper }}
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1">{{ c.full_name }}</h6>
+                        <span class="status-badge status-{{ c.status }} mb-2 d-inline-block">
+                            {{ c.status | capitalize }}
+                        </span>
+                        <div>
+                            <a href="{{ url_for('candidates.detail', id=c.id) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1" style="font-size: 0.75rem;">
+                                Full Profile
+                            </a>
+                        </div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Current Title -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Current Title</td>
+                    {% for c in candidates %}
+                    <td class="text-center small">{{ c.current_title or 'Unspecified' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Experience -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Years of Experience</td>
+                    {% for c in candidates %}
+                    <td class="text-center">
+                        <span class="fw-bold fs-5 text-primary">{{ c.years_experience }}</span>
+                        <span class="small text-muted">years</span>
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Education -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Highest Education</td>
+                    {% for c in candidates %}
+                    <td class="text-center small">{{ c.highest_education or 'Not Specified' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Location -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Location</td>
+                    {% for c in candidates %}
+                    <td class="text-center small">{{ c.location or 'Not Specified' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Contact Info -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Contact</td>
+                    {% for c in candidates %}
+                    <td class="text-center small">
+                        <div>{{ c.email or 'No email' }}</div>
+                        <div class="text-muted">{{ c.phone or 'No phone' }}</div>
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Skills Profile -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Skills Profile ({{ c.candidate_skills | length if c is defined }})</td>
+                    {% for c in candidates %}
+                    <td>
+                        <div class="d-flex flex-wrap gap-1 justify-content-center">
+                            {% for cs in c.candidate_skills %}
+                                <span class="skill-tag" style="font-size: 0.72rem;">{{ cs.skill.name }}</span>
+                            {% else %}
+                                <span class="small text-muted">No skills indexed</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Top Job Match -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Top Requisition Match</td>
+                    {% for c in candidates %}
+                    <td class="text-center">
+                        {% set top_m = c.match_results.order_by(c.match_results.model.overall_score.desc()).first() %}
+                        {% if top_m %}
+                            <div class="fw-semibold text-dark small">{{ top_m.job.title }}</div>
+                            <div class="d-inline-flex align-items-center gap-1 mt-1">
+                                <span class="badge bg-{{ top_m.score_badge_class }} fs-6">{{ top_m.overall_score }}%</span>
+                            </div>
+                            <div class="small text-muted mt-1" style="font-size: 0.72rem;">TF-IDF: {{ (top_m.tfidf_similarity * 100) | round(1) }}%</div>
+                        {% else %}
+                            <span class="small text-muted">No matches yet</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Report Action -->
+                <tr>
+                    <td class="fw-semibold bg-light small text-uppercase">Screening Report</td>
+                    {% for c in candidates %}
+                    <td class="text-center">
+                        <a href="{{ url_for('reports.candidate_pdf', id=c.id) }}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                            <i class="fa-solid fa-file-pdf me-1"></i> PDF
+                        </a>
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm py-5 text-center">
+    <i class="fa-solid fa-code-compare text-muted display-5 mb-3 opacity-50"></i>
+    <h5 class="fw-semibold">No Candidates Selected for Comparison</h5>
+    <p class="text-muted small mb-3">Select two or more candidates from the selector above or check candidates on the talent directory.</p>
+    <div>
+        <a href="{{ url_for('candidates.list_candidates') }}" class="btn btn-primary-accent text-white rounded-pill px-4">
+            Browse Candidate Directory
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

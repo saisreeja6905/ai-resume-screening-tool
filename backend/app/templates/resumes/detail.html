@@ -1,0 +1,215 @@
+{% extends "layout/base.html" %}
+
+{% block title %}{{ resume.original_filename }} - Parsed Detail{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('resumes.list_resumes') }}" class="btn btn-sm btn-light border rounded-circle p-2 text-decoration-none">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h1 class="h3 fw-bold text-dark mb-0">{{ resume.original_filename }}</h1>
+            {% if resume.processing_status == 'completed' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Parsed</span>
+            {% elif resume.processing_status == 'failed' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Failed</span>
+            {% endif %}
+        </div>
+        <p class="text-muted small mb-0">
+            Uploaded on {{ resume.upload_date.strftime('%B %d, %Y at %H:%M UTC') }} &bull; Size: {{ resume.formatted_file_size }}
+            {% if resume.candidate %}
+                &bull; Candidate: <a href="{{ url_for('candidates.detail', id=resume.candidate.id) }}" class="fw-semibold">{{ resume.candidate.full_name }}</a>
+            {% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="POST" action="{{ url_for('resumes.reparse', id=resume.id) }}">
+            <button type="submit" class="btn btn-outline-primary rounded-pill px-3 btn-sm">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Re-Parse Document
+            </button>
+        </form>
+        {% if resume.candidate %}
+        <a href="{{ url_for('candidates.detail', id=resume.candidate.id) }}" class="btn btn-primary rounded-pill px-3 btn-sm">
+            <i class="fa-solid fa-user me-1"></i> Candidate Profile
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if resume.error_message %}
+<div class="alert alert-danger shadow-sm rounded-3 mb-4">
+    <div class="d-flex gap-2">
+        <i class="fa-solid fa-circle-exclamation fs-5 text-danger mt-1"></i>
+        <div>
+            <h6 class="fw-bold mb-1">Extraction Error</h6>
+            <p class="small mb-0">{{ resume.error_message }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Main Left Column: Parsed Sections -->
+    <div class="col-lg-8">
+        <!-- Candidate Overview & Summary -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-id-card text-primary me-2"></i> Extracted Candidate Overview
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                {% set cand = resume.parsed_data.get('candidate', {}) %}
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <small class="text-muted text-uppercase fw-medium" style="font-size: 0.75rem;">Name</small>
+                        <div class="fw-semibold fs-5 text-dark">{{ cand.get('first_name') }} {{ cand.get('last_name') or '' }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted text-uppercase fw-medium" style="font-size: 0.75rem;">Contact Information</small>
+                        <div class="small text-dark">
+                            <div><i class="fa-regular fa-envelope text-muted me-1"></i> {{ cand.get('email') or 'Not Detected' }}</div>
+                            <div><i class="fa-solid fa-phone text-muted me-1"></i> {{ cand.get('phone') or 'Not Detected' }}</div>
+                            {% if cand.get('linkedin_url') %}
+                            <div><i class="fa-brands fa-linkedin text-primary me-1"></i> <a href="{{ cand.get('linkedin_url') }}" target="_blank" class="text-decoration-none">LinkedIn Profile</a></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if resume.parsed_data.get('summary') %}
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted text-uppercase fw-medium" style="font-size: 0.75rem;">Professional Summary</small>
+                    <p class="small text-dark mt-1 mb-0 lh-base">{{ resume.parsed_data.get('summary') }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Experience & Education -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-briefcase text-primary me-2"></i> Experience & Education Summary
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                {% set exp = resume.parsed_data.get('experience', {}) %}
+                {% set edu = resume.parsed_data.get('education', {}) %}
+                
+                <div class="row g-3">
+                    <div class="col-md-6 border-end-md">
+                        <h6 class="fw-semibold text-dark mb-2">Work Experience Span</h6>
+                        <div class="display-6 fw-bold text-primary">{{ exp.get('total_years', 0) }} <span class="fs-6 text-muted fw-normal">years</span></div>
+                        <p class="small text-muted mt-1">Calculated from employment history date ranges and text statements.</p>
+                        {% if exp.get('current_title') %}
+                        <div class="small fw-medium text-dark"><span class="text-muted">Detected Title:</span> {{ exp.get('current_title') }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 ps-md-4">
+                        <h6 class="fw-semibold text-dark mb-2">Education Credentials</h6>
+                        <div class="fw-bold fs-5 text-dark mb-1">{{ edu.get('highest_level', 'Not Specified') }}</div>
+                        {% if edu.get('institutions') %}
+                            <ul class="list-unstyled small text-muted mb-0">
+                                {% for inst in edu.get('institutions') %}
+                                <li><i class="fa-solid fa-building-columns me-1"></i> {{ inst }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects & Certifications -->
+        {% set projects = resume.parsed_data.get('projects', []) %}
+        {% set certs = resume.parsed_data.get('certifications', []) %}
+        {% if projects or certs %}
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-diagram-project text-primary me-2"></i> Projects & Certifications
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                {% if certs %}
+                <div class="mb-4">
+                    <h6 class="fw-semibold text-dark small text-uppercase mb-2">Certifications & Licenses</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for cert in certs %}
+                        <span class="badge bg-light text-dark border py-2 px-3 fw-medium">
+                            <i class="fa-solid fa-award text-warning me-1"></i> {{ cert }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if projects %}
+                <div>
+                    <h6 class="fw-semibold text-dark small text-uppercase mb-2">Technical Projects</h6>
+                    <div class="row g-3">
+                        {% for proj in projects %}
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="fw-semibold text-dark">{{ proj.title }}</div>
+                                <div class="small text-muted mt-1">{{ proj.description }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Sidebar Column: Skills & Raw Text -->
+    <div class="col-lg-4">
+        <!-- Skills Card -->
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-code text-primary me-2"></i> Extracted Skills
+                </h5>
+                {% set skills = resume.parsed_data.get('skills', []) %}
+                <span class="badge bg-primary-subtle text-primary">{{ skills | length }} Detected</span>
+            </div>
+            <div class="card-body p-3">
+                {% if skills %}
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for sk in skills %}
+                        <span class="skill-tag">
+                            {{ sk.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="small text-muted mb-0">No technical skills detected in the document text.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Raw Text Preview Card -->
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-align-left text-secondary me-2"></i> Raw Document Text
+                </h5>
+                <button class="btn btn-sm btn-light border" type="button" data-bs-toggle="collapse" data-bs-target="#rawTextCollapse">
+                    Toggle
+                </button>
+            </div>
+            <div class="collapse show" id="rawTextCollapse">
+                <div class="card-body p-3">
+                    <div class="bg-light p-3 rounded-2 font-monospace small" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-size: 0.75rem;">
+                        {{- resume.raw_text or 'No raw text extracted.' -}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

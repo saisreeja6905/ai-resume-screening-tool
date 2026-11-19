@@ -1,0 +1,97 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Ranking for {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('jobs.detail', id=job.id) }}" class="btn btn-sm btn-light border rounded-circle p-2 text-decoration-none">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h1 class="h3 fw-bold text-dark mb-0">Role Leaderboard: {{ job.title }}</h1>
+        </div>
+        <p class="text-muted small mb-0">Algorithmic affinity ranking based on TF-IDF semantic alignment and skill coverage.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('reports.job_pdf', id=job.id) }}" class="btn btn-outline-danger rounded-pill btn-sm px-3 shadow-sm">
+            <i class="fa-solid fa-file-pdf me-1"></i> Export PDF Report
+        </a>
+        <a href="{{ url_for('reports.job_csv', id=job.id) }}" class="btn btn-outline-success rounded-pill btn-sm px-3 shadow-sm">
+            <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- Ranking Table -->
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+    <div class="table-responsive">
+        <table class="table align-middle table-hover mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+                <tr>
+                    <th style="width: 60px;">Rank</th>
+                    <th>Candidate</th>
+                    <th style="width: 200px;">Overall Match</th>
+                    <th>Skill Score</th>
+                    <th>TF-IDF Overlap</th>
+                    <th>Experience</th>
+                    <th>Education</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if matches %}
+                    {% for m in matches %}
+                    <tr>
+                        <td class="text-center">
+                            <span class="badge rounded-circle {{ 'bg-warning text-dark' if loop.index == 1 else ('bg-secondary text-white' if loop.index == 2 else ('bg-brown text-white' if loop.index == 3 else 'bg-light text-muted border')) }}" style="width: 28px; height: 28px; line-height: 20px;">
+                                #{{ loop.index }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-sm">
+                                    {{ m.candidate.first_name[0] | upper }}
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('candidates.detail', id=m.candidate.id) }}" class="fw-semibold text-dark text-decoration-none">
+                                        {{ m.candidate.full_name }}
+                                    </a>
+                                    <div class="small text-muted">{{ m.candidate.current_title or 'Professional' }} &bull; {{ m.candidate.status | capitalize }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 10px;">
+                                    <div class="progress-bar bg-{{ m.score_badge_class }}" role="progressbar" style="width: {{ m.overall_score }}%;"></div>
+                                </div>
+                                <span class="fw-bold small text-{{ m.score_badge_class }}">{{ m.overall_score }}%</span>
+                            </div>
+                        </td>
+                        <td><span class="fw-semibold small text-dark">{{ m.skill_score }}%</span></td>
+                        <td><span class="small text-muted">{{ (m.tfidf_similarity * 100) | round(1) }}%</span></td>
+                        <td><span class="small text-muted">{{ m.experience_score }}%</span></td>
+                        <td><span class="small text-muted">{{ m.education_score }}%</span></td>
+                        <td class="text-end">
+                            <a href="{{ url_for('reports.candidate_report', id=m.candidate.id, job_id=job.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill">
+                                Report
+                            </a>
+                            <a href="{{ url_for('candidates.detail', id=m.candidate.id) }}" class="btn btn-sm btn-light border rounded-pill">
+                                Profile
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            No match rankings recorded for this requisition.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

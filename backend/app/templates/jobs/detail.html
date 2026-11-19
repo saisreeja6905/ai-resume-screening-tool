@@ -1,0 +1,248 @@
+{% extends "layout/base.html" %}
+
+{% block title %}{{ job.title }} - Screening Hub{% endblock %}
+
+{% block content %}
+<!-- Header Bar -->
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('jobs.list_jobs') }}" class="btn btn-sm btn-light border rounded-circle p-2 text-decoration-none">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h1 class="h3 fw-bold text-dark mb-0">{{ job.title }}</h1>
+            {% if job.is_active %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Active Requisition</span>
+            {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Inactive</span>
+            {% endif %}
+        </div>
+        <p class="text-muted small mb-0">
+            <span class="fw-medium text-dark">{{ job.department }}</span> &bull; 
+            <span><i class="fa-solid fa-location-dot me-1"></i> {{ job.location or 'Remote' }}</span> &bull; 
+            <span><i class="fa-solid fa-clock me-1"></i> {{ job.experience_display }}</span> &bull; 
+            <span><i class="fa-solid fa-graduation-cap me-1"></i> {{ job.education_level or 'Any' }}</span>
+        </p>
+    </div>
+
+    <!-- Actions Toolbar -->
+    <div class="d-flex flex-wrap gap-2">
+        <form method="POST" action="{{ url_for('jobs.run_matching', id=job.id) }}">
+            <button type="submit" class="btn btn-outline-primary rounded-pill btn-sm px-3 shadow-sm">
+                <i class="fa-solid fa-bolt me-1"></i> Run AI Match Pipeline
+            </button>
+        </form>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-secondary rounded-pill btn-sm dropdown-toggle px-3" data-bs-toggle="dropdown">
+                <i class="fa-solid fa-download me-1"></i> Export Rankings
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('reports.job_pdf', id=job.id) }}">
+                        <i class="fa-solid fa-file-pdf text-danger me-2"></i> PDF Screening Report
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('reports.job_csv', id=job.id) }}">
+                        <i class="fa-solid fa-file-csv text-success me-2"></i> CSV Data Export
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <a href="{{ url_for('jobs.edit', id=job.id) }}" class="btn btn-light border rounded-pill btn-sm px-3">
+            <i class="fa-solid fa-pencil me-1"></i> Edit Requisition
+        </a>
+    </div>
+</div>
+
+<!-- Requisition Summary Card -->
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+    <div class="card-body p-4">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <h6 class="fw-semibold text-dark small text-uppercase mb-2">Requisition Overview</h6>
+                <p class="text-muted small mb-3 lh-base">{{ job.description }}</p>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <small class="fw-semibold text-uppercase text-muted d-block mb-1" style="font-size: 0.7rem;">Required Technical Skills</small>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for skill in job.required_skills %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-medium">
+                                    {{ skill }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="fw-semibold text-uppercase text-muted d-block mb-1" style="font-size: 0.7rem;">Preferred / Bonus Skills</small>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% if job.preferred_skills %}
+                                {% for skill in job.preferred_skills %}
+                                    <span class="badge bg-light text-dark border fw-normal">
+                                        {{ skill }}
+                                    </span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="small text-muted">None specified</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screening Stats -->
+            <div class="col-lg-4 border-start-lg ps-lg-4">
+                <h6 class="fw-semibold text-dark small text-uppercase mb-3">Screening Metrics</h6>
+                <div class="p-3 bg-light rounded-3 mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small text-muted">Candidates Evaluated:</span>
+                        <span class="fw-bold text-dark">{{ matches | length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small text-muted">Strong Matches (&ge;70%):</span>
+                        <span class="fw-bold text-success">
+                            {{ matches | selectattr('overall_score', 'ge', 70) | list | length }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="small text-muted">Algorithm Version:</span>
+                        <span class="badge bg-secondary-subtle text-secondary">TF-IDF + Cosine v2</span>
+                    </div>
+                </div>
+
+                <div class="small text-muted">
+                    <i class="fa-solid fa-shield-halved text-primary me-1"></i>
+                    Scores weighted: 35% Skills &bull; 25% TF-IDF &bull; 20% Experience &bull; 10% Edu &bull; 10% Keywords.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Candidate Rankings Table -->
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="card-title fw-semibold mb-0 fs-6">
+                <i class="fa-solid fa-ranking-star text-warning me-2"></i> Candidate Screening Rankings
+            </h5>
+            <small class="text-muted">Ranked strictly by algorithmic match affinity; human discretion advised.</small>
+        </div>
+        <a href="{{ url_for('candidates.compare') }}?ids={{ matches | map(attribute='candidate_id') | join(',') }}" class="btn btn-sm btn-outline-dark rounded-pill">
+            <i class="fa-solid fa-code-compare me-1"></i> Compare Top Candidates
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table align-middle table-hover mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+                <tr>
+                    <th style="width: 50px;">Rank</th>
+                    <th>Candidate</th>
+                    <th style="width: 220px;">Overall Match</th>
+                    <th>Skills Match</th>
+                    <th>Matched Skills</th>
+                    <th>Missing Required</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if matches %}
+                    {% for m in matches %}
+                    <tr>
+                        <td class="text-center">
+                            <span class="badge rounded-circle {{ 'bg-warning text-dark' if loop.index == 1 else ('bg-secondary text-white' if loop.index == 2 else ('bg-brown text-white' if loop.index == 3 else 'bg-light text-muted border')) }}" style="width: 28px; height: 28px; line-height: 20px;">
+                                {{ loop.index }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-sm">
+                                    {{ m.candidate.first_name[0] | upper }}
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('candidates.detail', id=m.candidate.id) }}" class="fw-semibold text-dark text-decoration-none">
+                                        {{ m.candidate.full_name }}
+                                    </a>
+                                    <div class="small text-muted">{{ m.candidate.years_experience }} yrs exp &bull; {{ m.candidate.highest_education or 'Degree unlisted' }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 10px;">
+                                    <div class="progress-bar bg-{{ m.score_badge_class }}" role="progressbar" style="width: {{ m.overall_score }}%;" aria-valuenow="{{ m.overall_score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="fw-bold small text-{{ m.score_badge_class }}">{{ m.overall_score }}%</span>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.7rem;">TF-IDF: {{ (m.tfidf_similarity * 100) | round(1) }}% &bull; Exp: {{ m.experience_score | round(0) }}%</small>
+                        </td>
+                        <td>
+                            <span class="fw-semibold small text-dark">{{ m.skill_score }}%</span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1" style="max-width: 220px;">
+                                {% for s in m.matched_skills[:3] %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace" style="font-size: 0.7rem;">
+                                        <i class="fa-solid fa-check"></i> {{ s }}
+                                    </span>
+                                {% endfor %}
+                                {% if (m.matched_skills | length) > 3 %}
+                                    <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">+{{ (m.matched_skills | length) - 3 }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1" style="max-width: 220px;">
+                                {% if m.missing_required_skills %}
+                                    {% for s in m.missing_required_skills[:3] %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-monospace" style="font-size: 0.7rem;">
+                                            <i class="fa-solid fa-xmark"></i> {{ s }}
+                                        </span>
+                                    {% endfor %}
+                                    {% if (m.missing_required_skills | length) > 3 %}
+                                        <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">+{{ (m.missing_required_skills | length) - 3 }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-success-subtle text-success small">None (All Met)</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ m.candidate.status }}">
+                                {{ m.candidate.status | capitalize }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{{ url_for('reports.candidate_report', id=m.candidate.id, job_id=job.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" title="View Full Report">
+                                    <i class="fa-solid fa-chart-simple"></i> Report
+                                </a>
+                                <a href="{{ url_for('candidates.detail', id=m.candidate.id) }}" class="btn btn-sm btn-light border rounded-pill">
+                                    Profile
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-users-slash display-6 d-block mb-2 opacity-50"></i>
+                            <h6 class="fw-medium">No candidate matches computed for this requisition yet</h6>
+                            <p class="small text-muted mb-3">Ensure candidate resumes are uploaded, then run the matching pipeline.</p>
+                            <form method="POST" action="{{ url_for('jobs.run_matching', id=job.id) }}">
+                                <button type="submit" class="btn btn-primary-accent text-white rounded-pill px-4">
+                                    <i class="fa-solid fa-bolt me-1"></i> Screen All Candidates Now
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

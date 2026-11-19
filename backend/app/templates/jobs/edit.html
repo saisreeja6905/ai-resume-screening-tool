@@ -1,0 +1,118 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Edit {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9 col-xl-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="h3 fw-bold text-dark mb-1">Edit Requisition: {{ job.title }}</h1>
+                <p class="text-muted small mb-0">Modifying skills or requirements will automatically re-score all candidate profiles.</p>
+            </div>
+            <a href="{{ url_for('jobs.detail', id=job.id) }}" class="btn btn-outline-secondary rounded-pill btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to Role
+            </a>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('jobs.edit', id=job.id) }}">
+                    <!-- Title and Department -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label for="title" class="form-label small fw-medium">Job Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title" value="{{ job.title }}" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="department" class="form-label small fw-medium">Department <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="department" name="department" value="{{ job.department }}" required>
+                        </div>
+                    </div>
+
+                    <!-- Location, Type, Salary -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="location" class="form-label small fw-medium">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" value="{{ job.location or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="employment_type" class="form-label small fw-medium">Employment Type</label>
+                            <select class="form-select" id="employment_type" name="employment_type">
+                                <option value="full-time" {{ 'selected' if job.employment_type == 'full-time' }}>Full-time</option>
+                                <option value="contract" {{ 'selected' if job.employment_type == 'contract' }}>Contract</option>
+                                <option value="part-time" {{ 'selected' if job.employment_type == 'part-time' }}>Part-time</option>
+                                <option value="internship" {{ 'selected' if job.employment_type == 'internship' }}>Internship</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="salary_range" class="form-label small fw-medium">Salary Range</label>
+                            <input type="text" class="form-control" id="salary_range" name="salary_range" value="{{ job.salary_range or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Experience and Education Requirements -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="min_experience" class="form-label small fw-medium">Min Experience (Years)</label>
+                            <input type="number" step="0.5" min="0" max="30" class="form-control" id="min_experience" name="min_experience" value="{{ job.min_experience }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="max_experience" class="form-label small fw-medium">Max Experience (Years)</label>
+                            <input type="number" step="0.5" min="0" max="40" class="form-control" id="max_experience" name="max_experience" value="{{ job.max_experience or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="education_level" class="form-label small fw-medium">Preferred Education</label>
+                            <select class="form-select" id="education_level" name="education_level">
+                                <option value="Bachelor's Degree" {{ 'selected' if job.education_level == "Bachelor's Degree" }}>Bachelor's Degree</option>
+                                <option value="Master's Degree" {{ 'selected' if job.education_level == "Master's Degree" }}>Master's Degree</option>
+                                <option value="Ph.D." {{ 'selected' if job.education_level == "Ph.D." }}>Doctorate / Ph.D.</option>
+                                <option value="Associate Degree" {{ 'selected' if job.education_level == "Associate Degree" }}>Associate / Diploma</option>
+                                <option value="Any" {{ 'selected' if job.education_level == "Any" }}>Any / No Degree Required</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Skills Configuration -->
+                    <div class="mb-3">
+                        <label for="required_skills" class="form-label small fw-medium">Required Skills (Comma-separated) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="required_skills" name="required_skills" value="{{ required_skills_str }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="preferred_skills" class="form-label small fw-medium">Preferred Skills (Comma-separated)</label>
+                        <input type="text" class="form-control" id="preferred_skills" name="preferred_skills" value="{{ preferred_skills_str }}">
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <label for="description" class="form-label small fw-medium">Job Description & Responsibilities <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="6" required>{{ job.description }}</textarea>
+                    </div>
+
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ 'checked' if job.is_active }}>
+                        <label class="form-check-label small fw-medium" for="is_active">
+                            Requisition Active for Automatic Screening
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <form method="POST" action="{{ url_for('jobs.delete', id=job.id) }}" class="d-inline" onsubmit="return confirm('Delete this job requisition? All match data for this role will be removed.');">
+                            <button type="submit" class="btn btn-outline-danger rounded-pill px-3">
+                                <i class="fa-regular fa-trash-can me-1"></i> Delete Requisition
+                            </button>
+                        </form>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('jobs.detail', id=job.id) }}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                            <button type="submit" class="btn btn-primary-accent text-white rounded-pill px-4 shadow-sm">
+                                <i class="fa-solid fa-check me-1"></i> Save Changes & Rescore
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

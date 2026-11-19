@@ -1,0 +1,166 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Uploaded Resumes{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Resume Document Repository</h1>
+        <p class="text-muted small mb-0">Browse ingested PDF documents, inspect parsing outputs, or re-run NLP extraction.</p>
+    </div>
+    <div>
+        <a href="{{ url_for('resumes.upload') }}" class="btn btn-primary-accent text-white rounded-pill px-3 shadow-sm">
+            <i class="fa-solid fa-cloud-arrow-up me-1"></i> Ingest New Resumes
+        </a>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('resumes.list_resumes') }}" class="row g-2 align-items-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0" placeholder="Search by filename, candidate name, or email..." value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="" {{ 'selected' if not status_filter }}>All Processing Statuses</option>
+                    <option value="completed" {{ 'selected' if status_filter == 'completed' }}>Completed</option>
+                    <option value="failed" {{ 'selected' if status_filter == 'failed' }}>Failed</option>
+                    <option value="processing" {{ 'selected' if status_filter == 'processing' }}>Processing</option>
+                </select>
+            </div>
+            <div class="col-md-2 col-lg-2">
+                <button type="submit" class="btn btn-dark w-100 rounded-3">Filter</button>
+            </div>
+            {% if search_query or status_filter %}
+            <div class="col-md-12 mt-2">
+                <a href="{{ url_for('resumes.list_resumes') }}" class="small text-danger text-decoration-none">
+                    <i class="fa-solid fa-xmark me-1"></i> Clear filters
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Resumes Table -->
+<div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table align-middle table-hover mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+                <tr>
+                    <th>Original Document</th>
+                    <th>Associated Candidate</th>
+                    <th>Upload Date</th>
+                    <th>File Size</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if resumes %}
+                    {% for resume in resumes %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-file-pdf text-danger fs-4"></i>
+                                <div>
+                                    <a href="{{ url_for('resumes.detail', id=resume.id) }}" class="fw-semibold text-dark text-decoration-none">
+                                        {{ resume.original_filename }}
+                                    </a>
+                                    <div class="small text-muted font-monospace" style="font-size: 0.75rem;">{{ resume.filename }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if resume.candidate %}
+                                <a href="{{ url_for('candidates.detail', id=resume.candidate.id) }}" class="fw-medium text-primary text-decoration-none">
+                                    {{ resume.candidate.full_name }}
+                                </a>
+                                <div class="small text-muted">{{ resume.candidate.email or 'No email' }}</div>
+                            {% else %}
+                                <span class="text-muted small">Not linked</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small text-dark">{{ resume.upload_date.strftime('%b %d, %Y') }}</div>
+                            <div class="small text-muted" style="font-size: 0.75rem;">{{ resume.upload_date.strftime('%H:%M UTC') }}</div>
+                        </td>
+                        <td>
+                            <span class="small text-muted">{{ resume.formatted_file_size }}</span>
+                        </td>
+                        <td>
+                            {% if resume.processing_status == 'completed' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Completed</span>
+                            {% elif resume.processing_status == 'failed' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Failed</span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ resume.processing_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{{ url_for('resumes.detail', id=resume.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill" title="View Parsed Detail">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('resumes.reparse', id=resume.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill" title="Re-Parse">
+                                        <i class="fa-solid fa-arrows-rotate"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('resumes.delete', id=resume.id) }}" class="d-inline" onsubmit="return confirm('Delete this resume?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" title="Delete Resume">
+                                        <i class="fa-regular fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="fa-regular fa-folder-open display-6 d-block mb-2 opacity-50"></i>
+                            <h6 class="fw-medium">No resumes found</h6>
+                            <p class="small text-muted mb-3">Upload candidate resume documents in PDF format to begin screening.</p>
+                            <a href="{{ url_for('resumes.upload') }}" class="btn btn-sm btn-primary-accent text-white rounded-pill px-3">
+                                Ingest Resumes
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+        <small class="text-muted">Showing page {{ pagination.page }} of {{ pagination.pages }}</small>
+        <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                    <a class="page-link" href="{{ url_for('resumes.list_resumes', page=pagination.prev_num, q=search_query, status=status_filter) }}">Previous</a>
+                </li>
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                        <li class="page-item {{ 'active' if p == pagination.page }}">
+                            <a class="page-link" href="{{ url_for('resumes.list_resumes', page=p, q=search_query, status=status_filter) }}">{{ p }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                    <a class="page-link" href="{{ url_for('resumes.list_resumes', page=pagination.next_num, q=search_query, status=status_filter) }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

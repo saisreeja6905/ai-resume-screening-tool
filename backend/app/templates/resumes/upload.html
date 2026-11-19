@@ -1,0 +1,128 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Upload Resumes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="h3 fw-bold text-dark mb-1">Batch Resume Ingestion & Extraction</h1>
+                <p class="text-muted small mb-0">Upload searchable PDF resumes for automated NLP parsing and role screening.</p>
+            </div>
+            <a href="{{ url_for('resumes.list_resumes') }}" class="btn btn-outline-secondary rounded-pill btn-sm">
+                <i class="fa-solid fa-list me-1"></i> Resumes List
+            </a>
+        </div>
+
+        <!-- Ingestion Form -->
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-file-arrow-up text-primary me-2"></i> Document Ingestion Zone
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form id="resumeUploadForm" method="POST" action="{{ url_for('resumes.upload') }}" enctype="multipart/form-data">
+                    <div id="dropZone" class="upload-dropzone p-5 text-center rounded-3 border-2 border-dashed">
+                        <div class="dropzone-icon mb-3">
+                            <i class="fa-solid fa-cloud-arrow-up text-primary display-4"></i>
+                        </div>
+                        <h5 class="fw-semibold text-dark">Drag & Drop Resume PDFs Here</h5>
+                        <p class="text-muted small mb-3">Support for batch processing multiple PDFs (up to 16 MB each)</p>
+                        
+                        <label for="resumesInput" class="btn btn-primary-accent text-white rounded-pill px-4 py-2 shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-folder-open me-2"></i> Browse Computer
+                        </label>
+                        <input type="file" id="resumesInput" name="resumes" accept=".pdf,application/pdf" multiple class="d-none" required>
+                    </div>
+
+                    <!-- Selected Files Container -->
+                    <div id="fileListContainer" class="mt-4 d-none">
+                        <h6 class="fw-semibold small text-uppercase text-muted mb-2">Files Selected for Analysis:</h6>
+                        <ul id="selectedFilesList" class="list-group list-group-flush border rounded-3 mb-3"></ul>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="button" id="clearFilesBtn" class="btn btn-sm btn-outline-danger rounded-pill">
+                                <i class="fa-solid fa-trash-can me-1"></i> Clear Selection
+                            </button>
+                            <button type="submit" id="submitUploadBtn" class="btn btn-success rounded-pill px-4 py-2 fw-medium shadow-sm">
+                                <i class="fa-solid fa-play me-1"></i> Start Parsing Resumes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer bg-light border-0 py-3 small text-muted">
+                <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                <strong>Processing Note:</strong> Our pipeline extracts candidate identity, contact details, work history spans, education, and matches over 500 technical skills against active requisitions.
+            </div>
+        </div>
+
+        <!-- Processing Summary (if returned from POST) -->
+        {% if results_summary %}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-square-poll-vertical text-success me-2"></i> Extraction Summary
+                </h5>
+                <span class="badge bg-secondary-subtle text-secondary">{{ results_summary | length }} Files Processed</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light small text-uppercase">
+                        <tr>
+                            <th>Filename</th>
+                            <th>Status</th>
+                            <th>Candidate Profile</th>
+                            <th>Skills Found</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in results_summary %}
+                        <tr>
+                            <td class="fw-medium text-dark text-truncate" style="max-width: 200px;">
+                                <i class="fa-regular fa-file-pdf text-danger me-1"></i> {{ item.file }}
+                            </td>
+                            <td>
+                                {% if item.status == 'Success' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Success</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Failed</span>
+                                    <div class="text-danger small mt-1" style="font-size: 0.75rem;">{{ item.error }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.candidate_id %}
+                                    <a href="{{ url_for('candidates.detail', id=item.candidate_id) }}" class="fw-semibold text-primary text-decoration-none">
+                                        {{ item.candidate_name }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.skills_count is defined %}
+                                    <span class="badge bg-light text-dark border">{{ item.skills_count }} skills</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if item.candidate_id %}
+                                    <a href="{{ url_for('candidates.detail', id=item.candidate_id) }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                        View Profile
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

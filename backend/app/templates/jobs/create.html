@@ -1,0 +1,124 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Post New Job Requisition{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9 col-xl-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="h3 fw-bold text-dark mb-1">Create Job Requisition</h1>
+                <p class="text-muted small mb-0">Define role expectations, required skills taxonomy, and screening thresholds.</p>
+            </div>
+            <a href="{{ url_for('jobs.list_jobs') }}" class="btn btn-outline-secondary rounded-pill btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to Jobs
+            </a>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-clipboard-list text-primary me-2"></i> Requisition Parameters
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('jobs.create') }}">
+                    <!-- Title and Department -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label for="title" class="form-label small fw-medium">Job Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title" placeholder="e.g. Senior Python Developer" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="department" class="form-label small fw-medium">Department <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="department" name="department" placeholder="e.g. Engineering, Data Science" required>
+                        </div>
+                    </div>
+
+                    <!-- Location, Type, Salary -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="location" class="form-label small fw-medium">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" placeholder="e.g. Remote, New York, NY">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="employment_type" class="form-label small fw-medium">Employment Type</label>
+                            <select class="form-select" id="employment_type" name="employment_type">
+                                <option value="full-time" selected>Full-time</option>
+                                <option value="contract">Contract</option>
+                                <option value="part-time">Part-time</option>
+                                <option value="internship">Internship</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="salary_range" class="form-label small fw-medium">Salary Range (Optional)</label>
+                            <input type="text" class="form-control" id="salary_range" name="salary_range" placeholder="e.g. $130,000 - $160,000">
+                        </div>
+                    </div>
+
+                    <!-- Experience and Education Requirements -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="min_experience" class="form-label small fw-medium">Min Experience (Years)</label>
+                            <input type="number" step="0.5" min="0" max="30" class="form-control" id="min_experience" name="min_experience" value="3.0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="max_experience" class="form-label small fw-medium">Max Experience (Years)</label>
+                            <input type="number" step="0.5" min="0" max="40" class="form-control" id="max_experience" name="max_experience" placeholder="e.g. 7.0">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="education_level" class="form-label small fw-medium">Preferred Education</label>
+                            <select class="form-select" id="education_level" name="education_level">
+                                <option value="Bachelor's Degree" selected>Bachelor's Degree</option>
+                                <option value="Master's Degree">Master's Degree</option>
+                                <option value="Ph.D.">Doctorate / Ph.D.</option>
+                                <option value="Associate Degree">Associate / Diploma</option>
+                                <option value="Any">Any / No Degree Required</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Skills Configuration -->
+                    <div class="mb-3">
+                        <label for="required_skills" class="form-label small fw-medium">
+                            Required Skills <span class="text-danger">*</span>
+                            <span class="text-muted fw-normal">(Comma-separated. Must-have competencies weighted heavily in matching)</span>
+                        </label>
+                        <input type="text" class="form-control" id="required_skills" name="required_skills" placeholder="e.g. Python, Django, PostgreSQL, REST APIs" required>
+                        <div class="form-text small">Example: Python, FastAPI, Docker, PostgreSQL</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="preferred_skills" class="form-label small fw-medium">
+                            Preferred / Bonus Skills
+                            <span class="text-muted fw-normal">(Comma-separated. Nice-to-have competencies)</span>
+                        </label>
+                        <input type="text" class="form-control" id="preferred_skills" name="preferred_skills" placeholder="e.g. AWS, Kubernetes, CI/CD, Redis">
+                        <div class="form-text small">Example: AWS, Kubernetes, Microservices, Redis</div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <label for="description" class="form-label small fw-medium">Job Description & Responsibilities <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="6" placeholder="Provide an in-depth role overview, day-to-day responsibilities, and team context. This text is vectorized for TF-IDF semantic alignment." required></textarea>
+                    </div>
+
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" checked>
+                        <label class="form-check-label small fw-medium" for="is_active">
+                            Requisition Active for Automatic Screening
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('jobs.list_jobs') }}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary-accent text-white rounded-pill px-4 shadow-sm">
+                            <i class="fa-solid fa-check me-1"></i> Save & Run Screening
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

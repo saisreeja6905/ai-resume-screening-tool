@@ -1,0 +1,209 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Screening Report - {{ candidate.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+    <!-- Breadcrumb & Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <a href="{{ url_for('candidates.detail', id=candidate.id) }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Candidate Profile
+        </a>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-outline-dark btn-sm rounded-pill">
+                <i class="fa-solid fa-print me-1"></i> Print
+            </button>
+            <a href="{{ url_for('reports.candidate_pdf', id=candidate.id, job_id=match.job_id if match else none) }}" class="btn btn-primary-accent text-white btn-sm rounded-pill">
+                <i class="fa-solid fa-file-pdf me-1"></i> Download Verified PDF Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Official Report Card Header -->
+    <div class="card p-4 mb-4 border-0 shadow-sm bg-white">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 pb-3 border-bottom">
+            <div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-uppercase mb-2">
+                    Candidate Evaluation Report
+                </span>
+                <h1 class="h2 fw-bold text-dark mb-1">{{ candidate.full_name }}</h1>
+                <p class="text-muted mb-0 small">
+                    {{ candidate.current_title or 'Specialist' }} {% if candidate.current_company %}at <strong>{{ candidate.current_company }}</strong>{% endif %}
+                </p>
+            </div>
+            
+            {% if match %}
+            <div class="text-end">
+                <div class="display-6 fw-bold text-primary">{{ "%.1f"|format(match.overall_score) }}<span class="fs-6 text-muted">/100</span></div>
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    Evaluated vs. {{ match.job.title }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Contact & Meta Information Grid -->
+        <div class="row g-3 pt-3 small">
+            <div class="col-sm-6 col-md-3">
+                <span class="text-muted d-block">Email Address</span>
+                <strong>{{ candidate.email or 'N/A' }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <span class="text-muted d-block">Phone Number</span>
+                <strong>{{ candidate.phone or 'N/A' }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <span class="text-muted d-block">Location</span>
+                <strong>{{ candidate.location or 'Not specified' }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <span class="text-muted d-block">Experience</span>
+                <strong>{{ candidate.years_experience or 0 }} Years</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explainable Match Breakdown (If matched vs job) -->
+    {% if match %}
+    <div class="card p-4 mb-4 border-0 shadow-sm bg-white">
+        <h3 class="h5 fw-bold mb-3 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-magnifying-glass-chart text-primary"></i> Explainable Score Decomposition
+        </h3>
+        <p class="text-muted small mb-4">
+            The overall matching score is calculated as a decision-support signal combining NLP skill overlap (35%), TF-IDF cosine similarity (25%), experience calibration (20%), education level (10%), and keyword presence (10%).
+        </p>
+
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-md-4">
+                <div class="p-3 rounded bg-light border">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold text-muted">Skills Overlap</span>
+                        <span class="small fw-bold text-dark">{{ "%.1f"|format(match.skill_score or 0) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ match.skill_score or 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <div class="p-3 rounded bg-light border">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold text-muted">TF-IDF Vector Sim.</span>
+                        <span class="small fw-bold text-dark">{{ "%.1f"|format((match.tfidf_similarity or 0) * 100) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ (match.tfidf_similarity or 0) * 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <div class="p-3 rounded bg-light border">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold text-muted">Experience Match</span>
+                        <span class="small fw-bold text-dark">{{ "%.1f"|format(match.experience_score or 0) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ match.experience_score or 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-md-6">
+                <div class="p-3 rounded bg-light border">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold text-muted">Education Calibration</span>
+                        <span class="small fw-bold text-dark">{{ "%.1f"|format(match.education_score or 0) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ match.education_score or 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-md-6">
+                <div class="p-3 rounded bg-light border">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold text-muted">Keyword Coverage</span>
+                        <span class="small fw-bold text-dark">{{ "%.1f"|format(match.keyword_score or 0) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-secondary" role="progressbar" style="width: {{ match.keyword_score or 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matched & Missing Skills Comparison -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <h4 class="h6 fw-bold text-success mb-2">
+                    <i class="fa-solid fa-circle-check me-1"></i> Verified Matching Skills ({{ (match.matched_skills or [])|length }})
+                </h4>
+                <div class="d-flex flex-wrap gap-1">
+                    {% for skill in match.matched_skills or [] %}
+                        <span class="badge badge-skill-matched px-2 py-1 small">{{ skill }}</span>
+                    {% else %}
+                        <span class="text-muted small">No direct required skill matches detected.</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <h4 class="h6 fw-bold text-danger mb-2">
+                    <i class="fa-solid fa-circle-xmark me-1"></i> Missing Required Skills ({{ (match.missing_required_skills or [])|length }})
+                </h4>
+                <div class="d-flex flex-wrap gap-1">
+                    {% for skill in match.missing_required_skills or [] %}
+                        <span class="badge badge-skill-missing px-2 py-1 small">{{ skill }}</span>
+                    {% else %}
+                        <span class="badge bg-success-subtle text-success small">100% Required Skills Satisfied</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if match.missing_preferred_skills %}
+            <div class="col-12">
+                <h4 class="h6 fw-bold text-warning mb-2">
+                    <i class="fa-solid fa-circle-info me-1"></i> Missing Preferred Skills
+                </h4>
+                <div class="d-flex flex-wrap gap-1">
+                    {% for skill in match.missing_preferred_skills %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis px-2 py-1 small">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Candidate Biography & Extracted Skills -->
+    <div class="card p-4 mb-4 border-0 shadow-sm bg-white">
+        <h3 class="h5 fw-bold mb-3 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-layer-group text-primary"></i> All Detected Skills & Competencies ({{ candidate.skills|length }})
+        </h3>
+        <div class="d-flex flex-wrap gap-1 mb-4">
+            {% for cs in candidate.candidate_skills %}
+                <span class="badge bg-light text-dark border px-2 py-1 small">
+                    {{ cs.skill.name }}
+                </span>
+            {% else %}
+                <span class="text-muted small">No normalized skills catalogued.</span>
+            {% endfor %}
+        </div>
+
+        {% if candidate.summary %}
+        <h4 class="h6 fw-bold text-dark mb-2">Executive Summary</h4>
+        <p class="text-muted small" style="line-height: 1.6;">{{ candidate.summary }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Regulatory & Ethical AI Disclaimer -->
+    <div class="p-3 rounded bg-light border text-muted small text-center">
+        <i class="fa-solid fa-shield-halved text-secondary me-1"></i>
+        <strong>Compliance Notice:</strong> This report represents an AI decision-support indicator based on textual similarity and skill extraction. It does not replace human hiring judgment and does not evaluate protected personal characteristics.
+    </div>
+</div>
+{% endblock %}

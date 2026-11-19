@@ -1,0 +1,336 @@
+{% extends "layout/base.html" %}
+
+{% block title %}{{ candidate.full_name }} - Profile{% endblock %}
+
+{% block content %}
+<!-- Candidate Profile Header -->
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+    <div class="card-body p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="avatar-lg bg-primary-subtle text-primary fw-bold fs-3">
+                    {{ candidate.first_name[0] | upper }}
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h1 class="h3 fw-bold text-dark mb-0">{{ candidate.full_name }}</h1>
+                        <div class="dropdown">
+                            <button class="status-badge status-{{ candidate.status }} dropdown-toggle border-0" type="button" data-bs-toggle="dropdown">
+                                {{ candidate.status | capitalize }}
+                            </button>
+                            <ul class="dropdown-menu shadow-sm border-0 small">
+                                <li><h6 class="dropdown-header">Update Pipeline Status</h6></li>
+                                {% for st in ['new', 'screening', 'shortlisted', 'rejected', 'hired'] %}
+                                <li>
+                                    <form method="POST" action="{{ url_for('candidates.update_status', id=candidate.id) }}">
+                                        <input type="hidden" name="status" value="{{ st }}">
+                                        <button type="submit" class="dropdown-item {{ 'active' if candidate.status == st }}">
+                                            {{ st | capitalize }}
+                                        </button>
+                                    </form>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        <span><i class="fa-solid fa-briefcase me-1"></i> {{ candidate.current_title or 'Professional' }}</span> &bull;
+                        <span><i class="fa-solid fa-clock me-1"></i> {{ candidate.years_experience }} years experience</span> &bull;
+                        <span><i class="fa-solid fa-graduation-cap me-1"></i> {{ candidate.highest_education or 'Degree unlisted' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Actions -->
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('reports.candidate_report', id=candidate.id) }}" class="btn btn-outline-secondary rounded-pill px-3 btn-sm">
+                    <i class="fa-solid fa-file-invoice me-1"></i> Evaluation Report
+                </a>
+                <a href="{{ url_for('reports.candidate_pdf', id=candidate.id) }}" class="btn btn-primary-accent text-white rounded-pill px-3 btn-sm shadow-sm">
+                    <i class="fa-solid fa-file-pdf me-1"></i> Download PDF
+                </a>
+            </div>
+        </div>
+
+        <!-- Contact & Profile Links Subbar -->
+        <div class="row g-2 mt-3 pt-3 border-top small text-muted">
+            <div class="col-sm-6 col-md-3">
+                <i class="fa-regular fa-envelope me-1 text-primary"></i>
+                <span class="text-dark">{{ candidate.email or 'No email provided' }}</span>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <i class="fa-solid fa-phone me-1 text-primary"></i>
+                <span class="text-dark">{{ candidate.phone or 'No phone provided' }}</span>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <i class="fa-solid fa-location-dot me-1 text-primary"></i>
+                <span class="text-dark">{{ candidate.location or 'Location unlisted' }}</span>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                {% if candidate.linkedin_url %}
+                    <i class="fa-brands fa-linkedin text-primary me-1"></i>
+                    <a href="{{ candidate.linkedin_url }}" target="_blank" class="text-decoration-none">LinkedIn Profile</a>
+                {% else %}
+                    <i class="fa-brands fa-linkedin text-muted me-1"></i>
+                    <span>No LinkedIn attached</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Main Left Column -->
+    <div class="col-lg-8">
+        <!-- Summary Card -->
+        {% if candidate.summary %}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-user-pen text-primary me-2"></i> Professional Summary
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="small text-dark mb-0 lh-base">{{ candidate.summary }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Match Results Across Jobs -->
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-chart-line text-primary me-2"></i> Role Screening Affinity Scores
+                </h5>
+                <span class="badge bg-light text-secondary border">{{ match_results | length }} Jobs Screened</span>
+            </div>
+            <div class="card-body p-4">
+                {% if match_results %}
+                    <div class="accordion" id="matchResultsAccordion">
+                        {% for match in match_results %}
+                        <div class="accordion-item border rounded-3 mb-3 overflow-hidden shadow-none">
+                            <h2 class="accordion-header" id="headingMatch{{ match.id }}">
+                                <button class="accordion-button {{ 'collapsed' if not loop.first }} py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMatch{{ match.id }}" aria-expanded="{{ 'true' if loop.first else 'false' }}">
+                                    <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                        <div>
+                                            <span class="fw-bold text-dark">{{ match.job.title }}</span>
+                                            <div class="small text-muted">{{ match.job.department }}</div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="progress d-none d-sm-block" style="width: 100px; height: 8px;">
+                                                <div class="progress-bar bg-{{ match.score_badge_class }}" style="width: {{ match.overall_score }}%;"></div>
+                                            </div>
+                                            <span class="fw-bold fs-6 text-{{ match.score_badge_class }}">{{ match.overall_score }}%</span>
+                                        </div>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="collapseMatch{{ match.id }}" class="accordion-collapse collapse {{ 'show' if loop.first }}" data-bs-parent="#matchResultsAccordion">
+                                <div class="accordion-body bg-light p-4">
+                                    <!-- Component Scores -->
+                                    <div class="row g-2 text-center mb-3">
+                                        <div class="col">
+                                            <div class="p-2 bg-white rounded-2 border">
+                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Skills (35%)</small>
+                                                <span class="fw-bold text-dark">{{ match.skill_score }}%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 bg-white rounded-2 border">
+                                                <small class="text-muted d-block" style="font-size: 0.7rem;">TF-IDF (25%)</small>
+                                                <span class="fw-bold text-dark">{{ (match.tfidf_similarity * 100) | round(1) }}%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 bg-white rounded-2 border">
+                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Experience (20%)</small>
+                                                <span class="fw-bold text-dark">{{ match.experience_score }}%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 bg-white rounded-2 border">
+                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Education (10%)</small>
+                                                <span class="fw-bold text-dark">{{ match.education_score }}%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 bg-white rounded-2 border">
+                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Keywords (10%)</small>
+                                                <span class="fw-bold text-dark">{{ match.keyword_score }}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Matched and Missing Skills -->
+                                    <div class="mb-3">
+                                        <small class="fw-semibold text-uppercase text-muted d-block mb-1" style="font-size: 0.7rem;">Matched Skills</small>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for s in match.matched_skills %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                    <i class="fa-solid fa-check me-1"></i> {{ s }}
+                                                </span>
+                                            {% else %}
+                                                <span class="small text-muted">No direct skill matches</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <small class="fw-semibold text-uppercase text-muted d-block mb-1" style="font-size: 0.7rem;">Missing Required Skills</small>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for s in match.missing_required_skills %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                    <i class="fa-solid fa-xmark me-1"></i> {{ s }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-success-subtle text-success">All required skills met</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    {% set exp = match.score_explanation %}
+                                    {% if exp and exp.recommendation %}
+                                    <div class="p-3 bg-white rounded-3 border mt-3">
+                                        <small class="fw-semibold text-dark d-block mb-1"><i class="fa-solid fa-lightbulb text-warning me-1"></i> AI Screening Assessment:</small>
+                                        <p class="small text-muted mb-0">{{ exp.recommendation }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">No job screening results recorded for this candidate yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Ingested Resumes List -->
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-file-pdf text-danger me-2"></i> Ingested Resume Documents
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for res in candidate.resumes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-file-pdf text-danger fs-4"></i>
+                            <div>
+                                <a href="{{ url_for('resumes.detail', id=res.id) }}" class="fw-medium text-dark text-decoration-none">
+                                    {{ res.original_filename }}
+                                </a>
+                                <div class="small text-muted">Uploaded {{ res.upload_date.strftime('%b %d, %Y') }} &bull; {{ res.formatted_file_size }}</div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('resumes.detail', id=res.id) }}" class="btn btn-sm btn-light border rounded-pill">
+                                View Parsed Text
+                            </a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-center py-3 text-muted small">No resumes currently attached.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar Column: Skills, Notes, Activity -->
+    <div class="col-lg-4">
+        <!-- Discovered Skills Card -->
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-code text-primary me-2"></i> Competency Profile
+                </h5>
+                <span class="badge bg-primary-subtle text-primary">{{ candidate.candidate_skills | length }} Skills</span>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex flex-wrap gap-1">
+                    {% for cs in candidate.candidate_skills %}
+                        <span class="skill-tag">
+                            {{ cs.skill.name }}
+                        </span>
+                    {% else %}
+                        <span class="small text-muted">No skills indexed for this candidate profile.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recruiter Notes Card -->
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-note-sticky text-warning me-2"></i> Recruiter Notes
+                </h5>
+            </div>
+            <div class="card-body p-3">
+                <!-- Add Note Form -->
+                <form method="POST" action="{{ url_for('candidates.add_note', id=candidate.id) }}" class="mb-3">
+                    <div class="mb-2">
+                        <textarea name="note_text" class="form-control form-control-sm" rows="3" placeholder="Add screening notes, phone screen observations, or feedback..." required></textarea>
+                    </div>
+                    {% if active_jobs %}
+                    <div class="mb-2">
+                        <select name="job_id" class="form-select form-select-sm">
+                            <option value="">General Candidate Note (No specific job)</option>
+                            {% for j in active_jobs %}
+                                <option value="{{ j.id }}">Role: {{ j.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-sm btn-primary-accent text-white rounded-pill w-100">
+                        <i class="fa-solid fa-plus me-1"></i> Save Note
+                    </button>
+                </form>
+
+                <!-- Existing Notes List -->
+                <div class="recruiter-notes-list" style="max-height: 300px; overflow-y: auto;">
+                    {% for note in notes %}
+                    <div class="p-3 bg-light rounded-3 mb-2">
+                        <p class="small text-dark mb-1">{{ note.note_text }}</p>
+                        <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 0.72rem;">
+                            <span><i class="fa-solid fa-user me-1"></i> {{ note.user.full_name }}</span>
+                            <span>{{ note.created_at.strftime('%b %d, %H:%M') }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                        <p class="small text-muted text-center py-2 mb-0">No recruiter notes yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate Activity Timeline -->
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title fw-semibold mb-0 fs-6">
+                    <i class="fa-solid fa-clock-rotate-left text-secondary me-2"></i> Screening History
+                </h5>
+            </div>
+            <div class="card-body p-3">
+                <div class="activity-timeline small" style="max-height: 250px; overflow-y: auto;">
+                    {% for item in history %}
+                    <div class="d-flex align-items-start gap-2 py-1 border-bottom border-light">
+                        <i class="fa-solid fa-circle text-primary mt-1" style="font-size: 0.4rem;"></i>
+                        <div>
+                            <div class="text-dark fw-medium">{{ item.action | replace('_', ' ') | capitalize }}</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">{{ item.created_at.strftime('%b %d, %Y %H:%M') }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                        <p class="text-muted small text-center mb-0">No events logged yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
