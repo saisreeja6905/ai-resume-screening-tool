@@ -284,6 +284,12 @@ class SkillExtractor:
         # Return title-cased or trimmed name if not in dictionary
         return clean
 
+    def normalize_skill(self, name: str):
+        """Return tuple of (canonical_name, category) for a given skill or alias."""
+        canonical = self.normalize_skill_name(name)
+        category = self.get_skill_category(canonical)
+        return canonical, category
+
     def get_skill_category(self, name: str) -> str:
         """Get skill category for canonical or raw skill name."""
         lower = name.strip().lower()

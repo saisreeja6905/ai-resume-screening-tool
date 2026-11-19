@@ -424,6 +424,8 @@ class ReportGenerator:
 
         return output.getvalue()
 
+    generate_job_csv = generate_candidate_ranking_csv
+
 
 # Singleton instance
 report_generator = ReportGenerator()
